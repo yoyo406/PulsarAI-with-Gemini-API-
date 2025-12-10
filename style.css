@@ -19,7 +19,7 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    overflow: hidden; /* Empêcher le défilement du body */
+    overflow: hidden; 
 }
 
 /* --- Arrière-plan Spatial --- */
@@ -29,8 +29,8 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    z-index: -1; /* Placer derrière le contenu */
-    pointer-events: none; /* Ne pas interférer avec les clics */
+    z-index: -1; 
+    pointer-events: none; 
 }
 
 .planet {
@@ -52,7 +52,7 @@ body {
 }
 
 .star {
-    width: 2px; /* Astuce pour créer des étoiles en croix */
+    width: 2px; 
     height: 10px;
 }
 .star::after {
@@ -88,18 +88,18 @@ body {
 /* --- Conteneur Principal --- */
 .container {
     width: 100%;
-    height: 100vh; /* Prend toute la hauteur */
+    height: 100vh; 
     display: flex;
     flex-direction: column;
-    background: transparent; /* Fond transparent */
+    background: transparent; 
 }
 
 #main-content {
-    flex-grow: 1; /* Prend tout l'espace disponible */
+    flex-grow: 1; 
     display: flex;
     flex-direction: column;
     padding: 20px;
-    position: relative; /* Pour positionner la zone de saisie en bas */
+    position: relative; 
 }
 
 /* --- Configuration Clé API --- */
@@ -108,10 +108,10 @@ body {
     gap: 10px;
     margin-bottom: 10px;
     padding: 10px;
-    background-color: rgba(51, 51, 51, 0.8); /* Fond semi-transparent */
+    background-color: rgba(51, 51, 51, 0.8); 
     border-radius: 8px;
     border: 1px solid #555;
-    z-index: 10; /* Au-dessus des messages si besoin */
+    z-index: 10; 
 }
 
 #api-key-input {
@@ -134,27 +134,25 @@ body {
     transition: background-color 0.3s;
 }
 
-#set-api-key-btn:hover {
+#set-api-key-btn:hover:not(:disabled) {
     background-color: #777;
 }
 
 /* --- Zone de Chat --- */
 .chat-messages {
-    flex-grow: 1; /* Prend l'espace entre la clé API et la saisie */
+    flex-grow: 1; 
     overflow-y: auto;
     padding: 10px;
-    margin-bottom: 80px; /* Espace pour la zone de saisie en bas */
+    margin-bottom: 80px; 
     display: flex;
     flex-direction: column;
     gap: 10px;
-    /* Masquer la barre de défilement pour un look plus propre (Webkit) */
     scrollbar-width: none; 
     -ms-overflow-style: none;
 }
 .chat-messages::-webkit-scrollbar {
     display: none;
 }
-
 
 .message {
     padding: 10px 15px;
@@ -204,7 +202,7 @@ body {
     display: flex;
     align-items: center;
     background-color: var(--input-bg);
-    border-radius: 30px; /* Bords très arrondis */
+    border-radius: 30px; 
     padding: 5px 5px 5px 20px;
     width: 100%;
     max-width: 600px;
@@ -218,7 +216,7 @@ body {
     background: transparent;
     color: var(--text-color);
     font-size: 16px;
-    outline: none; /* Supprimer le contour au focus */
+    outline: none; 
 }
 #user-input::placeholder {
     color: var(--input-text);
@@ -226,10 +224,10 @@ body {
 }
 
 #send-btn {
-    background-color: #555; /* Couleur du cercle du bouton */
+    background-color: #555; 
     color: var(--text-color);
     border: none;
-    border-radius: 50%; /* Cercle parfait */
+    border-radius: 50%; 
     width: 40px;
     height: 40px;
     display: flex;
@@ -246,7 +244,7 @@ body {
 
 #send-btn svg {
     fill: currentColor;
-    transform: translateX(2px); /* Ajuster légèrement la position de l'icône */
+    transform: translateX(2px); 
 }
 
 /* Styles pour les éléments désactivés */
@@ -259,7 +257,7 @@ body {
 
 .loading-indicator {
     position: absolute;
-    bottom: 75px; /* Au-dessus de la barre de saisie */
+    bottom: 75px; 
     left: 50%;
     transform: translateX(-50%);
     font-style: italic;
