@@ -1,3 +1,4 @@
+LOL
 # 💻 Awesome Application Development Resources
 
 A comprehensive list of frameworks, tools, and resources for modern application development.
