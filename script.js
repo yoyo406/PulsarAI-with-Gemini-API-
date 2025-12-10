@@ -1,192 +1,115 @@
-// --- Initialisation du thème ---
-function initTheme() {
-  const savedTheme = localStorage.getItem('theme') || 'dark';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-}
+import { GoogleGenAI } from "https://cdn.jsdelivr.net/npm/@google/genai@0.2.1/dist/index.min.js";
 
-function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const newTheme = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', newTheme);
-  localStorage.setItem('theme', newTheme);
-}
-
-document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
-initTheme();
-
-// --- Éléments DOM ---
-const apiSetup = document.getElementById('api-setup');
-const chatContainer = document.getElementById('chat-container');
-const apiKeyInput = document.getElementById('api-key');
-const saveKeyBtn = document.getElementById('save-key');
-const chatMessages = document.getElementById('chat-messages');
+// Éléments du DOM
+const apiKeyInput = document.getElementById('api-key-input');
+const setApiKeyBtn = document.getElementById('set-api-key-btn');
+const chatContainer = document.getElementById('chat-messages');
 const userInput = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
-const resetBtn = document.getElementById('reset-btn');
+const sendButton = document.getElementById('send-btn');
+const loadingIndicator = document.getElementById('loading-indicator');
 
-// --- Chargement initial ---
-const savedKey = localStorage.getItem('gemini_api_key');
-if (savedKey) {
-  initChat();
-} else {
-  apiSetup.classList.remove('hidden');
+// Variables d'état de l'API
+let ai = null;
+let chat = null;
+const model = "gemini-2.5-flash"; // Modèle rapide et stable
+
+// --- Fonctions d'aide ---
+
+function appendMessage(sender, text) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', sender);
+    // Remplacer les sauts de ligne par des balises <br> pour l'affichage HTML
+    const formattedText = text.replace(/\n/g, '<br>');
+    messageDiv.innerHTML = `<p>${formattedText}</p>`;
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight; // Défilement vers le bas
 }
 
-// --- Gestion de la clé API ---
-saveKeyBtn.addEventListener('click', () => {
-  const key = apiKeyInput.value.trim();
-  if (!key) {
-    alert('Veuillez entrer une clé API.');
-    return;
-  }
-  if (!key.startsWith('AIzaSy')) {
-    alert('⚠️ La clé API Gemini commence par "AIzaSy".');
-    return;
-  }
-  localStorage.setItem('gemini_api_key', key);
-  initChat();
-});
-
-resetBtn.addEventListener('click', () => {
-  localStorage.removeItem('gemini_api_key');
-  chatContainer.classList.add('hidden');
-  apiSetup.classList.remove('hidden');
-  apiKeyInput.value = '';
-  chatMessages.innerHTML = '';
-});
-
-// --- Initialisation du chat ---
-function initChat() {
-  apiSetup.classList.add('hidden');
-  chatContainer.classList.remove('hidden');
-  addMessage("Bonjour, je suis PulsarAI. Comment puis-je vous aider ?", "bot", true);
+function toggleChat(enable) {
+    userInput.disabled = !enable;
+    sendButton.disabled = !enable;
+    apiKeyInput.disabled = enable;
+    setApiKeyBtn.disabled = enable;
+    if (enable) {
+        userInput.focus();
+        appendMessage('ai', "Clé API validée. Le chat est maintenant actif !");
+    }
 }
 
-// --- Saisie utilisateur ---
-userInput.addEventListener('input', () => {
-  userInput.style.height = 'auto';
-  userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+// --- Logique d'initialisation de la clé API ---
+
+setApiKeyBtn.addEventListener('click', () => {
+    const key = apiKeyInput.value.trim();
+    if (key === '') {
+        alert("Veuillez entrer une clé API valide.");
+        return;
+    }
+
+    try {
+        // Initialiser le SDK avec la clé de l'utilisateur
+        ai = new GoogleGenAI({ apiKey: key });
+        
+        // Créer une nouvelle session de chat pour conserver l'historique
+        chat = ai.chats.create({ model });
+
+        // Tenter un simple appel pour vérifier si la clé fonctionne (ou simplement l'activer)
+        // Pour des raisons de rapidité et d'éviter un appel inutile : nous l'activons directement.
+        // Les erreurs d'API seront gérées dans sendMessage.
+        toggleChat(true);
+
+    } catch (error) {
+        console.error("Erreur d'initialisation de l'API:", error);
+        alert("Erreur lors de l'initialisation de l'API. Assurez-vous que la clé est correcte.");
+        // Réinitialiser les variables en cas d'échec
+        ai = null;
+        chat = null;
+        toggleChat(false);
+    }
 });
 
-sendBtn.addEventListener('click', sendMessage);
-userInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+// --- Logique d'envoi de message ---
+
+sendButton.addEventListener('click', sendMessage);
+userInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !userInput.disabled) {
+        sendMessage();
+    }
 });
 
-// --- Envoi du message ---
 async function sendMessage() {
-  const message = userInput.value.trim();
-  if (!message) return;
-
-  addMessage(message, 'user', false);
-  userInput.value = '';
-  userInput.style.height = '44px';
-
-  const messageEl = addMessage('', 'bot', false);
-  const typingEl = createTypingIndicator();
-  messageEl.appendChild(typingEl);
-
-  const API_KEY = localStorage.getItem('gemini_api_key');
-  if (!API_KEY) {
-    typingEl.remove();
-    messageEl.textContent = '❌ Clé API manquante. Veuillez réinitialiser.';
-    return;
-  }
-
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: message }] }],
-          generationConfig: {
-            maxOutputTokens: 1024,
-            temperature: 0.7
-          }
-        })
-      }
-    );
-
-    const data = await response.json();
-    typingEl.remove();
-
-    if (!response.ok) {
-      const errorMsg = data.error?.message || 'Erreur inconnue';
-      messageEl.textContent = `❌ ${errorMsg}`;
-      return;
+    const prompt = userInput.value.trim();
+    if (prompt === '') return;
+    if (!chat) {
+        alert("Veuillez d'abord initialiser le chat avec votre clé API.");
+        return;
     }
 
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      messageEl.textContent = '⚠️ Aucune réponse générée.';
-      return;
+    // Afficher le message de l'utilisateur
+    appendMessage('user', prompt);
+    userInput.value = '';
+    
+    // Désactiver le chat pendant le traitement et afficher l'indicateur
+    toggleChat(false);
+    loadingIndicator.style.display = 'block';
+
+    try {
+        // Envoyer le message en utilisant la session de chat
+        const response = await chat.sendMessage({ message: prompt });
+        
+        // Récupérer le texte de la réponse
+        const responseText = response.text;
+
+        appendMessage('ai', responseText);
+        
+    } catch (error) {
+        console.error("Erreur Gemini API:", error);
+        // Afficher un message d'erreur clair pour l'utilisateur
+        appendMessage('ai', `Désolé, une erreur est survenue lors de la communication avec l'API Gemini. (Vérifiez la console pour les détails de l'erreur, la clé est peut-être invalide ou expirée.)`);
+        
+    } finally {
+        // Réactiver le chat et masquer l'indicateur
+        toggleChat(true);
+        loadingIndicator.style.display = 'none';
+        userInput.focus(); // Renvoyer le focus à l'entrée
     }
-
-    const botReply = data.candidates[0].content.parts[0].text;
-    messageEl.textContent = botReply;
-    addCopyButton(messageEl);
-
-  } catch (error) {
-    console.error('Erreur réseau :', error);
-    typingEl.remove();
-    messageEl.textContent = '⚠️ Impossible de joindre l’IA. Vérifiez votre connexion.';
-  }
-}
-
-// --- Utilitaires UI ---
-function createTypingIndicator() {
-  const div = document.createElement('div');
-  div.className = 'typing';
-  div.innerHTML = '<span>.</span><span>.</span><span>.</span>';
-  const style = document.createElement('style');
-  style.textContent = `
-    .typing {
-      display: inline-block;
-      color: var(--text-secondary);
-    }
-    .typing span {
-      opacity: 0;
-      animation: blink 1.2s infinite;
-      animation-fill-mode: forwards;
-      margin: 0 2px;
-    }
-    .typing span:nth-child(2) { animation-delay: 0.2s; }
-    .typing span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes blink {
-      0%, 40% { opacity: 0; }
-      50%, 100% { opacity: 1; }
-    }
-  `;
-  div.appendChild(style);
-  return div;
-}
-
-function addMessage(text, sender, addCopy = false) {
-  const div = document.createElement('div');
-  div.classList.add('message', sender);
-  if (text) div.textContent = text;
-  chatMessages.appendChild(div);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-  if (addCopy && sender === 'bot') {
-    addCopyButton(div);
-  }
-  return div;
-}
-
-function addCopyButton(messageEl) {
-  const copyBtn = document.createElement('button');
-  copyBtn.className = 'copy-btn';
-  copyBtn.textContent = 'Copier';
-  copyBtn.onclick = () => {
-    navigator.clipboard.writeText(messageEl.textContent.trim()).then(() => {
-      const original = copyBtn.textContent;
-      copyBtn.textContent = '✓ Copié !';
-      setTimeout(() => copyBtn.textContent = original, 2000);
-    });
-  };
-  messageEl.appendChild(copyBtn);
 }
